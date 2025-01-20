@@ -1,0 +1,3 @@
+[submodule "CS236_os_lab/projects/ostep-projects"]
+	path = CS236_os_lab/projects/ostep-projects
+	url = https://github.com/HARSHIL2836R/ostep-projects.git
