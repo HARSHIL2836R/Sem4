@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				// if (background_process == -1 ) waitpid(cpid,NULL,0);
+				if (background_process == -1 ) waitpid(cpid,NULL,0);
 			}
 
 			cpid = fork();
@@ -210,15 +210,18 @@ int main(int argc, char *argv[])
 			}
 			if (cpid == 0)
 			{
-				dup2(out_in_pipe[0], STDIN_FILENO);
+				dup2(out_in_pipe[0],STDIN_FILENO);
 				close(out_in_pipe[0]);
 				close(out_in_pipe[1]);
-				char c;
+				// char* c = malloc(8);
 				// printf ("Process [%s] Reading from descriptor %d \n", process, fd);
-				while(read(STDIN_FILENO, &c, 1) != 0) {
-					printf("%c", c);
-				}
-				exit(0);
+				// while(read(STDIN_FILENO, &c, 1) != 0) {
+				// 	printf("FUCK\n");
+				// 	printf("%c", c);
+				// }
+				// read(STDIN_FILENO,&c,8);
+				// printf("%s\n",c);
+				// exit(0);
 				int ret = execvp(new_tokens[0], new_tokens);
 				if (ret == -1)
 				{

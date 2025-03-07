@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "traps.h": "c",
+        "memlayout.h": "c"
+    }
+}
