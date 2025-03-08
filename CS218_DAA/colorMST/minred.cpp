@@ -27,6 +27,7 @@ struct UnionFind
 	{
 		if (parent[v] != v)
 			parent[v] = find_set(parent[v]);
+			// return find_set(parent[v]);
 		return parent[v];
 	}
 
@@ -35,13 +36,19 @@ struct UnionFind
 		u = find_set(u);
 		v = find_set(v);
 		if (size[u]<size[v])
-		{
+		{// SWAP
 			u = u + v;
 			v = u - v;
 			u = u - v;
 		}
 		parent[v] = u;
 		size[u] = size[u] + size[v];
+	}
+
+	void remove(int u, int v)
+	{
+		if (parent[u] == v) parent[u] = u;
+		if (parent[v] == u) parent[v] = v;
 	}
 };
 
@@ -60,7 +67,7 @@ struct Graph
 		this->UF = UnionFind(V);
 		for (int i=0;i<V;i++)
 			UF.make_set(i);
-	} 
+	}
 
 	// Utility function to add an edge  // red=1 means red
 	void addEdge(int u, int v, int w, int red) 
@@ -111,9 +118,17 @@ struct Graph
 		// cout<<"Total weight: "<<w<<endl;
 		return w;
 	}
+
+	void removeEdge(pair<int,iPair> edge)
+	{
+		bedges.erase(find(bedges.begin(),bedges.end(),edge));
+		E--;
+
+		UF.remove(edge.second.first,edge.second.second);
+	}
 }; 
 
-void make_mst(Graph &mst, Graph &g)
+void make_mrst(Graph &mst, Graph &g)
 {
 	// cout<<"test 1\n";
 	for (int i=0;i<2;i++)
@@ -142,9 +157,46 @@ void make_mst(Graph &mst, Graph &g)
 
 void swap_blue_with_red(Graph &st, Graph g)
 {
-	auto biggest_blue_edge = st.bedges.back();
-	// cout<<biggest_blue_edge.first<<endl;
 
+	priority_queue<pair<int,iPair>> max_diff;
+	for (int i=0;i<st.bedges.size();i++)
+	{
+		for (int j=0;j<g.redges.size();j++)
+		{
+			max_diff.push(make_pair(st.bedges[i].first - g.redges[j].first,make_pair(i,j)));
+		}
+	}
+	while(1)
+	{
+		auto top = max_diff.top();
+		max_diff.pop();
+
+		auto new_st = Graph(st);
+		auto old_edge = st.bedges[top.second.first];
+		new_st.removeEdge(old_edge);
+		auto new_edge = g.redges[top.second.second];
+		new_st.addEdge(new_edge.second.first,new_edge.second.second,new_edge.first,1);
+		
+		int flag = 1;
+		for(int i=0;i<new_st.V;i++)
+		{
+			if (flag == 0) break;
+			for(int j=0;j<new_st.V;j++)
+			{
+				if (new_st.connected(i,j) == 0)
+				{
+					flag = 0;
+					break;
+				}
+			}
+		}
+		
+		if (flag == 1)
+		{
+			st = Graph(new_st);
+			break;
+		}
+	}
 }
 
 int main()
@@ -170,18 +222,19 @@ int main()
 	// cout << 0 << endl;
 	// cout << 0 << endl;
 
-	g.print();
+	// g.print();
 	Graph spanning_tree(V);
-	make_mst(spanning_tree,g);
+	make_mrst(spanning_tree,g);
 	// cout<<"ONEDONE\n";
-	spanning_tree.print();
+	// spanning_tree.print();
 	// cout<<"Finish printing\n";
 	int wt = spanning_tree.get_weight();
 
-	// while (wt > threshold)
-	// {
-	// 	swap_blue_with_red(spanning_tree,g);
-	// }
+	while (wt > threshold)
+	{
+		swap_blue_with_red(spanning_tree,g);
+		wt = spanning_tree.get_weight();
+	}
 
 	cout<< spanning_tree.redges.size()<<endl;
 	cout<<wt<<endl;
