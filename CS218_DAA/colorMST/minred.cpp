@@ -6,6 +6,7 @@ using namespace std;
 typedef pair<int, int> iPair;
 typedef pair<int, iPair> edg;
 
+//Disjoint Union Find Data structure
 struct UnionFind
 {
 	vector<int> parent,size;
@@ -38,9 +39,7 @@ struct UnionFind
 		v = find_set(v);
 		if (size[u]<size[v])
 		{// SWAP
-			u = u + v;
-			v = u - v;
-			u = u - v;
+			swap(u,v);
 		}
 		parent[v] = u;
 		size[u] = size[u] + size[v];
@@ -142,20 +141,19 @@ struct Graph
 
 void make_mrst(Graph &mst, Graph &g)
 {
-	// cout<<"test 1\n";
 	for (int i=0;i<2;i++)
 	{
 		vector< edg > *edges;
 		if (i==0) edges = & g.bedges;
 		if (i==1) edges = & g.redges;
-		// cout<<"test 2\n";
 		sort(edges->begin(),edges->end(),[](edg a, edg b)
 		{
 			return a.first < b.first;
 		});
-		for (auto edge: *edges)
+		for (auto& edge: *edges)
 		{
-			if (mst.connected(edge.second.first,edge.second.second) == 0){
+			if (mst.connected(edge.second.first,edge.second.second) == 0)
+			{
 				mst.valid[edge] = true;
 				if (i==0)
 					mst.addEdge(edge.second.first,edge.second.second,edge.first,0);
@@ -169,6 +167,7 @@ void make_mrst(Graph &mst, Graph &g)
 }
 
 void dfs(Graph &st, vector<int>& parent,int p, int u,vector<bool>& visited, vector<int>& cycle_edges){
+	if (visited[u]) return;
 	visited[u] = true;
 	parent[u] = p;
 	// cerr<<p<<u<<"dfsing\n";
@@ -211,36 +210,36 @@ vector<int> get_cycle(Graph &st)
 
 edg get_bedge(Graph &st, edg edge)
 {
-	// cerr<<"HERE\n";
 	st.addEdge(edge.second.first,edge.second.second,edge.first,1);
 	vector<int> cycle_edges = get_cycle(st);
 	st.removeEdge(edge);
-	// cerr<<"GOT CYCLEs"<<edge.second.first<<edge.second.second<< "\n";
-	// for (int i=0;i<cycle_edges.size();i++)
-	// 	cerr<<cycle_edges[i]<<", ";
-	// cerr<<'\n';
 
-	// sort(st.bedges.begin(),st.bedges.end(),[](edg a, edg b)
-	// 	{
-	// 		return a.first < b.first;
-	// 	});
-	for (int i = st.bedges.size()-1;i >= 0; i--)
+	if (cycle_edges.empty()) perror("NO CYCLE FOUND!!!\n");
+
+	// Find max weighted blue edge to replace
+	for (int i = st.bedges.size() - 1; i >= 0; i--)	
 	{
-		auto it = find(cycle_edges.begin(),cycle_edges.end(),st.bedges[i].second.first);
-		if (it!=cycle_edges.end())
+		auto it = find(cycle_edges.begin(), cycle_edges.end(), st.bedges[i].second.first);
+		if (it != cycle_edges.end())
 		{
-			if ((next(it) == cycle_edges.end() && cycle_edges[0] == st.bedges[i].second.second)
-				|| (it == cycle_edges.begin() && cycle_edges[cycle_edges.size()-1] == st.bedges[i].second.second)
-				|| (*next(it) == st.bedges[i].second.second)
-				|| (*prev(it) == st.bedges[i].second.second))
+			// Bounds check before accessing next or prev
+			if (it != cycle_edges.begin() && *prev(it) == st.bedges[i].second.second)
+				return st.bedges[i];
+
+			else if (next(it) != cycle_edges.end() && *next(it) == st.bedges[i].second.second)
+				return st.bedges[i];
+
+			else if (!cycle_edges.empty() && ((it == cycle_edges.begin() && cycle_edges.back() == st.bedges[i].second.second)
+				|| (next(it) == cycle_edges.end() && cycle_edges[0] == st.bedges[i].second.second)))
 				return st.bedges[i];
 		}
 	}
-	perror("WHY HERE!!");
+
+	//Complete red cycle
 	return edge;
 }
 
-void swaps(Graph&st,Graph&g,priority_queue<pair<int,pair<edg,edg>>> &max_diff)
+void find_swaps(Graph&st,Graph&g,priority_queue<pair<int,pair<edg,edg>>> &max_diff)
 {
 	for (int i=0; i<g.redges.size();i++)
 	{
@@ -254,7 +253,6 @@ void swaps(Graph&st,Graph&g,priority_queue<pair<int,pair<edg,edg>>> &max_diff)
 
 void swap_blue_with_red(Graph &st, priority_queue<pair<int,pair<edg,edg>>> &max_diff)
 {
-	// cerr<<"YAYY\n";
 	auto top = max_diff.top();
 	max_diff.pop();
 
@@ -262,7 +260,7 @@ void swap_blue_with_red(Graph &st, priority_queue<pair<int,pair<edg,edg>>> &max_
 	auto new_edge = top.second.second;
 
 	if (!st.valid[old_edge])
-	{
+	{// modify swaps
 		auto bedge = get_bedge(st,new_edge);
 		max_diff.push({bedge.first-new_edge.first,{bedge,new_edge}});
 		return;
@@ -274,7 +272,7 @@ void swap_blue_with_red(Graph &st, priority_queue<pair<int,pair<edg,edg>>> &max_
 
 		auto cycle_edges = get_cycle(st);
 		if (cycle_edges.size()>0)
-		{
+		{// modify swaps
 			st.removeEdge(new_edge);
 			st.addEdge(old_edge.second.first,old_edge.second.second,old_edge.first,0);
 			auto t = get_bedge(st,new_edge);
@@ -286,6 +284,9 @@ void swap_blue_with_red(Graph &st, priority_queue<pair<int,pair<edg,edg>>> &max_
 		st.valid[new_edge] = true;
 	}
 
+	auto cycle_edges = get_cycle(st);
+	if (cycle_edges.size() > 0)
+		perror("CYCLE REMAINS");
 }
 
 int main()
@@ -308,21 +309,14 @@ int main()
 		g.addEdge(u, v, w, r);
 	}
 
-	// cout << 0 << endl;
-	// cout << 0 << endl;
-
-	// g.print();
 	Graph spanning_tree(V);
 	make_mrst(spanning_tree,g);
-	// cout<<"ONEDONE\n";
-	// spanning_tree.print();
-	// cout<<"Finish printing\n";
 	int wt = spanning_tree.get_weight();
 
 	if (wt > threshold)
 	{
 		priority_queue<pair<int,pair<edg,edg>>> max_diff;
-		swaps(spanning_tree,g,max_diff);
+		find_swaps(spanning_tree,g,max_diff);
 		while (wt > threshold)
 		{
 			// cerr<<"here\n";
