@@ -4,6 +4,7 @@ using namespace std;
 
 // Creating shortcut for an integer pair 
 typedef pair<int, int> iPair;
+typedef pair<int, iPair> edg;
 
 struct UnionFind
 {
@@ -44,20 +45,16 @@ struct UnionFind
 		parent[v] = u;
 		size[u] = size[u] + size[v];
 	}
-
-	void remove(int u, int v)
-	{
-		if (parent[u] == v) parent[u] = u;
-		if (parent[v] == u) parent[v] = v;
-	}
 };
 
 // Structure to represent a graph 
 struct Graph 
 { 
 	int V, E;
-	vector< pair<int, iPair> > redges,bedges;
+	vector<edg> redges,bedges;
 	UnionFind UF;
+	vector<vector<int>> adj;
+	map<edg,bool> valid;
 
 	// Constructor 
 	Graph(int V) 
@@ -67,6 +64,7 @@ struct Graph
 		this->UF = UnionFind(V);
 		for (int i=0;i<V;i++)
 			UF.make_set(i);
+		this->adj.resize(V);
 	}
 
 	// Utility function to add an edge  // red=1 means red
@@ -76,7 +74,9 @@ struct Graph
 			redges.push_back({w,{u,v}});
 		else
 			bedges.push_back({w,{u,v}});
-		
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+
 		E++;
 
 		UF._union(u,v);
@@ -119,13 +119,25 @@ struct Graph
 		return w;
 	}
 
-	void removeEdge(pair<int,iPair> edge)
-	{
-		bedges.erase(find(bedges.begin(),bedges.end(),edge));
+	void removeEdge(edg edge) {
+		auto it = find(bedges.begin(), bedges.end(), edge);
+		if (it != bedges.end()) bedges.erase(it);
+	
+		it = find(redges.begin(), redges.end(), edge);
+		if (it != redges.end()) redges.erase(it);
+	
+		auto& vec1 = adj[edge.second.first];
+		auto& vec2 = adj[edge.second.second];
+	
+		auto it1 = find(vec1.begin(), vec1.end(), edge.second.second);
+		if (it1 != vec1.end()) vec1.erase(it1);
+	
+		auto it2 = find(vec2.begin(), vec2.end(), edge.second.first);
+		if (it2 != vec2.end()) vec2.erase(it2);
+	
 		E--;
-
-		UF.remove(edge.second.first,edge.second.second);
 	}
+	
 }; 
 
 void make_mrst(Graph &mst, Graph &g)
@@ -133,17 +145,18 @@ void make_mrst(Graph &mst, Graph &g)
 	// cout<<"test 1\n";
 	for (int i=0;i<2;i++)
 	{
-		vector< pair<int, iPair> > *edges;
+		vector< edg > *edges;
 		if (i==0) edges = & g.bedges;
 		if (i==1) edges = & g.redges;
 		// cout<<"test 2\n";
-		sort(edges->begin(),edges->end(),[](pair<int, iPair> a, pair<int, iPair> b)
+		sort(edges->begin(),edges->end(),[](edg a, edg b)
 		{
 			return a.first < b.first;
 		});
 		for (auto edge: *edges)
 		{
 			if (mst.connected(edge.second.first,edge.second.second) == 0){
+				mst.valid[edge] = true;
 				if (i==0)
 					mst.addEdge(edge.second.first,edge.second.second,edge.first,0);
 				else if (i==1)
@@ -155,48 +168,124 @@ void make_mrst(Graph &mst, Graph &g)
 	}
 }
 
-void swap_blue_with_red(Graph &st, Graph g)
-{
+void dfs(Graph &st, vector<int>& parent,int p, int u,vector<bool>& visited, vector<int>& cycle_edges){
+	visited[u] = true;
+	parent[u] = p;
+	// cerr<<p<<u<<"dfsing\n";
 
-	priority_queue<pair<int,iPair>> max_diff;
-	for (int i=0;i<st.bedges.size();i++)
-	{
-		for (int j=0;j<g.redges.size();j++)
-		{
-			max_diff.push(make_pair(st.bedges[i].first - g.redges[j].first,make_pair(i,j)));
+	for(int i=0;i<st.adj[u].size(); i++){
+		int v = st.adj[u][i];
+		// cerr<<u<<","<<v<<"\n";
+		if(!visited[v]){
+			// cerr<<u<<v<<"dfsing\n";		
+			dfs(st,parent,u,v,visited,cycle_edges);
 		}
-	}
-	while(1)
-	{
-		auto top = max_diff.top();
-		max_diff.pop();
-
-		auto new_st = Graph(st);
-		auto old_edge = st.bedges[top.second.first];
-		new_st.removeEdge(old_edge);
-		auto new_edge = g.redges[top.second.second];
-		new_st.addEdge(new_edge.second.first,new_edge.second.second,new_edge.first,1);
-		
-		int flag = 1;
-		for(int i=0;i<new_st.V;i++)
-		{
-			if (flag == 0) break;
-			for(int j=0;j<new_st.V;j++)
-			{
-				if (new_st.connected(i,j) == 0)
-				{
-					flag = 0;
-					break;
-				}
+		else if(v != p){
+			// cerr<<"in here\n";
+			// extract cycle using parent pointers.
+			cycle_edges.push_back(v);
+			while(u != v){
+				// cerr<<"cycle add "<<u<<endl;
+				cycle_edges.push_back(u);
+				u = parent[u];
 			}
-		}
-		
-		if (flag == 1)
-		{
-			st = Graph(new_st);
-			break;
+			throw "cycle detected";
 		}
 	}
+}
+
+vector<int> get_cycle(Graph &st)
+{
+	vector<int> parent(st.V,-1);
+	vector<bool> visited(st.V,false);
+	vector<int> cycle_edges;
+
+	try{
+		dfs(st,parent,-1,0,visited,cycle_edges);
+	}
+	catch(const char* msg){
+		return cycle_edges;
+	}
+	return cycle_edges;
+}
+
+edg get_bedge(Graph &st, edg edge)
+{
+	// cerr<<"HERE\n";
+	st.addEdge(edge.second.first,edge.second.second,edge.first,1);
+	vector<int> cycle_edges = get_cycle(st);
+	st.removeEdge(edge);
+	// cerr<<"GOT CYCLEs"<<edge.second.first<<edge.second.second<< "\n";
+	// for (int i=0;i<cycle_edges.size();i++)
+	// 	cerr<<cycle_edges[i]<<", ";
+	// cerr<<'\n';
+
+	// sort(st.bedges.begin(),st.bedges.end(),[](edg a, edg b)
+	// 	{
+	// 		return a.first < b.first;
+	// 	});
+	for (int i = st.bedges.size()-1;i >= 0; i--)
+	{
+		auto it = find(cycle_edges.begin(),cycle_edges.end(),st.bedges[i].second.first);
+		if (it!=cycle_edges.end())
+		{
+			if ((next(it) == cycle_edges.end() && cycle_edges[0] == st.bedges[i].second.second)
+				|| (it == cycle_edges.begin() && cycle_edges[cycle_edges.size()-1] == st.bedges[i].second.second)
+				|| (*next(it) == st.bedges[i].second.second)
+				|| (*prev(it) == st.bedges[i].second.second))
+				return st.bedges[i];
+		}
+	}
+	perror("WHY HERE!!");
+	return edge;
+}
+
+void swaps(Graph&st,Graph&g,priority_queue<pair<int,pair<edg,edg>>> &max_diff)
+{
+	for (int i=0; i<g.redges.size();i++)
+	{
+		if (!st.valid[g.redges[i]])
+		{
+			auto bedge = get_bedge(st,g.redges[i]);
+			max_diff.push({bedge.first-g.redges[i].first,{bedge,g.redges[i]}});
+		}
+	}
+}
+
+void swap_blue_with_red(Graph &st, priority_queue<pair<int,pair<edg,edg>>> &max_diff)
+{
+	// cerr<<"YAYY\n";
+	auto top = max_diff.top();
+	max_diff.pop();
+
+	auto old_edge = top.second.first;
+	auto new_edge = top.second.second;
+
+	if (!st.valid[old_edge])
+	{
+		auto bedge = get_bedge(st,new_edge);
+		max_diff.push({bedge.first-new_edge.first,{bedge,new_edge}});
+		return;
+	}
+	if (top.first > 0)
+	{
+		st.addEdge(new_edge.second.first,new_edge.second.second,new_edge.first,1);
+		st.removeEdge(old_edge);
+
+		auto cycle_edges = get_cycle(st);
+		if (cycle_edges.size()>0)
+		{
+			st.removeEdge(new_edge);
+			st.addEdge(old_edge.second.first,old_edge.second.second,old_edge.first,0);
+			auto t = get_bedge(st,new_edge);
+			max_diff.push({t.first-new_edge.first,{t,new_edge}});
+			return;
+		}
+
+		st.valid[old_edge] = false;
+		st.valid[new_edge] = true;
+	}
+
 }
 
 int main()
@@ -230,10 +319,16 @@ int main()
 	// cout<<"Finish printing\n";
 	int wt = spanning_tree.get_weight();
 
-	while (wt > threshold)
+	if (wt > threshold)
 	{
-		swap_blue_with_red(spanning_tree,g);
-		wt = spanning_tree.get_weight();
+		priority_queue<pair<int,pair<edg,edg>>> max_diff;
+		swaps(spanning_tree,g,max_diff);
+		while (wt > threshold)
+		{
+			// cerr<<"here\n";
+			swap_blue_with_red(spanning_tree,max_diff);
+			wt = spanning_tree.get_weight();
+		}
 	}
 
 	cout<< spanning_tree.redges.size()<<endl;
