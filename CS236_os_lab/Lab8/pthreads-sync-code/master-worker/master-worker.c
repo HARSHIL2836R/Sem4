@@ -6,22 +6,19 @@
 #include <signal.h>
 #include <wait.h>
 #include <pthread.h>
-#include <unistd.h>
 
 #define EMPTY -1
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t empty = PTHREAD_COND_INITIALIZER;
-pthread_cond_t full = PTHREAD_COND_INITIALIZER;
-
-int item_to_produce, curr_buf_size;
+int item_to_produce, items_consumed, curr_buf_size, curr_idx;
 int total_items, max_buf_size, num_workers, num_masters;
-int items_consumed;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t full = PTHREAD_COND_INITIALIZER, empty = PTHREAD_COND_INITIALIZER;
+
 int *buffer;
 
-void print_produced(int num, int master, void *ptr) {
+void print_produced(int num, int master) {
 
-  printf("Produced %d by master %d %p\n", num, master,ptr);
+  printf("Produced %d by master %d\n", num, master);
 }
 
 void print_consumed(int num, int worker) {
@@ -29,6 +26,7 @@ void print_consumed(int num, int worker) {
   printf("Consumed %d by worker %d\n", num, worker);
   
 }
+
 
 //produce items and place in buffer
 //modify code below to synchronize correctly
@@ -39,82 +37,70 @@ void *generate_requests_loop(void *data)
   while(1)
     {
       pthread_mutex_lock(&mutex);
-      if(item_to_produce >= total_items) {
-        printf("broadcasting by %d\n",thread_id);
-        pthread_cond_broadcast(&empty);
-        break;
-      } 
-      
-      while (curr_buf_size >= max_buf_size)
+
+      while (curr_buf_size == max_buf_size)
       {
-        printf("me so raha hu %d\n",thread_id);
-        pthread_cond_wait(&full,&mutex);
-        printf("me uth gaya hu %d \n",thread_id);
+        pthread_cond_wait(&empty,&mutex);
       }
 
-      buffer[curr_buf_size++] = item_to_produce;
-      print_produced(item_to_produce, thread_id,buffer+curr_buf_size-1);
-      pthread_cond_signal(&empty);
-      printf("curr_buff_size:%d, max_buff_size:%d, items_to_produce:%d\n",curr_buf_size,max_buf_size,item_to_produce);
+      if(item_to_produce >= total_items) {
+        pthread_mutex_unlock(&mutex);
+        return 0;
+      }
+
+      buffer[++curr_idx] = item_to_produce;
+      print_produced(item_to_produce, thread_id);
+      curr_buf_size++;
       item_to_produce++;
 
+      pthread_cond_signal(&full);
       pthread_mutex_unlock(&mutex);
     }
   return 0;
 }
 
-void *consume(void *data)
-{
-  int thread_id = *(int *)data;
-  int run = 1;
-  int temp;
-
-  while(run)
-  {
-    pthread_mutex_lock(&mutex);
-
-    while(curr_buf_size < 0)
-      {
-        printf("waiting\n");
-        pthread_cond_wait(&empty,&mutex);
-        printf("uth gaya\n");
-      }
-
-    while (curr_buf_size >= 0)
-    {
-      if(curr_buf_size>=max_buf_size)curr_buf_size--;
-      temp = buffer[curr_buf_size];
-      buffer[curr_buf_size--] = EMPTY;
-      print_consumed(temp,thread_id);
-      printf("curr_buff_size:%d, max_buff_size:%d, items_consumed:%d\n",1+curr_buf_size,max_buf_size,items_consumed);
-      // pthread_cond_signal(&full);
-      pthread_cond_broadcast(&full);
-      items_consumed++;
-      if (items_consumed >= total_items)
-        {
-          printf("ran wway\n");
-          pthread_cond_broadcast(&full);
-          run = 0;
-          break;
-        }
-    }
-    printf("just here\n");
-    pthread_mutex_unlock(&mutex);
-  }
-
-  return NULL;
-}
-
 //write function to be run by worker threads
 //ensure that the workers call the function print_consumed when they consume an item
+
+void *consume_requests_loop(void *data)
+{
+  int thread_id = *((int *)data);
+  int temp;
+
+  while(1)
+  {
+    pthread_mutex_lock(&mutex);
+    while (curr_buf_size == 0)
+    {
+      if (items_consumed >= total_items)
+      {
+        pthread_mutex_unlock(&mutex);
+        return 0;
+      }
+      pthread_cond_wait(&full,&mutex);
+    }
+
+    temp = buffer[curr_idx];
+    buffer[curr_idx--] = EMPTY;
+    print_consumed(temp,thread_id);
+    items_consumed++;
+    curr_buf_size--;
+
+    pthread_cond_signal(&empty);
+    pthread_mutex_unlock(&mutex);
+  }
+}
 
 int main(int argc, char *argv[])
 {
   int *master_thread_id;
   pthread_t *master_thread;
+  int *worker_thread_id;
+  pthread_t *worker_thread;
   item_to_produce = 0;
   items_consumed = 0;
   curr_buf_size = 0;
+  curr_idx = 0;
   
   int i;
   
@@ -131,7 +117,6 @@ int main(int argc, char *argv[])
     
 
    buffer = (int *)malloc (sizeof(int) * max_buf_size);
-   printf("%p\n",buffer);
 
    //create master producer threads
    master_thread_id = (int *)malloc(sizeof(int) * num_masters);
@@ -141,15 +126,16 @@ int main(int argc, char *argv[])
 
   for (i = 0; i < num_masters; i++)
     pthread_create(&master_thread[i], NULL, generate_requests_loop, (void *)&master_thread_id[i]);
-  
+    
   //create worker consumer threads
-  int *consumer_thread_id = (int *)malloc(sizeof(int) * num_workers);
-  pthread_t *consumer_thread = (pthread_t *)malloc(sizeof(pthread_t) * num_workers);
-  for (i = 0; i< num_workers;i++)
-    consumer_thread_id[i] = i;
+  worker_thread_id = (int *)malloc(sizeof(int) * num_workers);
+  worker_thread = (pthread_t *)malloc(sizeof(pthread_t) * num_workers);
+  for (i = 0; i < num_workers; i++)
+    worker_thread_id[i] = i;
 
-  for (i = 0;i<num_workers;i++)
-    pthread_create(&consumer_thread[i],NULL,consume, (void *)&consumer_thread_id[i]);
+  for (i = 0; i < num_workers; i++)
+    pthread_create(&worker_thread[i], NULL, consume_requests_loop, (void *)&worker_thread_id[i]);
+
   
   //wait for all threads to complete
   for (i = 0; i < num_masters; i++)
@@ -157,19 +143,18 @@ int main(int argc, char *argv[])
       pthread_join(master_thread[i], NULL);
       printf("master %d joined\n", i);
     }
-
   for (i = 0; i < num_workers; i++)
     {
-      pthread_join(consumer_thread[i], NULL);
-      printf("consumer %d joined\n", i);
+      pthread_join(worker_thread[i], NULL);
+      printf("worker %d joined\n", i);
     }
   
   /*----Deallocating Buffers---------------------*/
   free(buffer);
-  free(master_thread_id);
+  free(worker_thread);
+  free(worker_thread_id);
   free(master_thread);
-  free(consumer_thread);
-  free(consumer_thread_id);
+  // free(master_thread_id);
   
   return 0;
 }
