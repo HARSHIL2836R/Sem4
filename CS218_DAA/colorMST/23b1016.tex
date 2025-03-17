@@ -1,0 +1,25 @@
+\documentclass{article}
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue, filecolor=blue]{hyperref} %For Coloring Links
+\usepackage{geometry} % Customizing margins
+\geometry{ %Ideal Page Size
+a4paper,
+total={170mm,257mm},
+left=20mm,
+top=20mm,
+}
+\title{CS218 DAA Programming Assignment 1}
+\author{23B1016: Harshil Solanki}
+
+\begin{document} 
+\maketitle
+\section*{Algorithm:}
+\begin{enumerate}
+    \item Create a Minimum Spanning Tree by adding lowest weight edges for vertices that are not yet connected, by giving preference first to blue edges and then red edges. $ O(E\log E)$
+    \item If weight less than threshold, return. Else, choose a red edge to swap with blue edge in order to reduce weight. A blue edge can't be swapped with another blue edge because the smallest weighted edges are already selected.
+    \item Iterate over all red edges not in Spanning Tree, add them to ST and pick a blue edge from the cycle created such that swapping them maximally reduces total weight. Add these pairs to heap valued by reduced weight. $O(V_r \dot (V+E))$
+    \item Loop till weight > threshold and swap edges from the edge pair on the top of the heap. Modify the heap accordingly after each successful/failed swap. If cycle is detected after swap (precomputed values no more work), revert and check again for better match. $O(V+E)$
+\end{enumerate}
+\section*{Compilation instructions (for Linux)}
+\texttt{g++ 23b1016.cpp -fsanitize=address -o 23b1016.out}\\
+Run \texttt{23b1016.out}
+\end{document}

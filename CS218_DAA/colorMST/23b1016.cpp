@@ -104,7 +104,7 @@ struct Graph
 			return 0;
 	}
 
-	// Get totak weight of graph
+	// Get total weight of graph
 	int get_weight()
 	{
 		int w=0;
@@ -232,7 +232,7 @@ edg get_bedge(Graph &st, edg edge)
 		}
 	}
 
-	// Complete red cycle
+	// Complete red cycle, remove this edge itself
 	return edge;
 }
 
