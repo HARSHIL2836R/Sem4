@@ -14,10 +14,13 @@ void ReaderLock(struct read_write_lock * rw)
 {
   //	Write the code for aquiring read-write lock by the reader.
   pthread_mutex_lock(&rw->mutex);
-  while (rw->writers>0)
-    ;
+  if (rw->writers > 0)
+  {
+    pthread_cond_wait(&rw->cond_r,&rw->mutex);
+  }
   rw->readers++;
   pthread_mutex_unlock(&rw->mutex);
+
 }
 
 void ReaderUnlock(struct read_write_lock * rw)
@@ -25,6 +28,8 @@ void ReaderUnlock(struct read_write_lock * rw)
   //	Write the code for releasing read-write lock by the reader.
   pthread_mutex_lock(&rw->mutex);
   rw->readers--;
+  pthread_cond_broadcast(&rw->cond_r);
+  pthread_cond_broadcast(&rw->cond_w);
   pthread_mutex_unlock(&rw->mutex);
 }
 
@@ -32,17 +37,20 @@ void WriterLock(struct read_write_lock * rw)
 {
   //	Write the code for aquiring read-write lock by the writer.
   pthread_mutex_lock(&rw->mutex);
-  while (rw->readers>0)
-    ;
+  while (rw->readers > 0 || rw->writers > 0)
+    {
+      pthread_cond_wait(&rw->cond_w,&rw->mutex);
+    }
   rw->writers++;
-  pthread_mutex_unlock(&rw->mutex);
+  pthread_mutex_unlock(&rw->mutex);  
 }
 
 void WriterUnlock(struct read_write_lock * rw)
 {
   //	Write the code for releasing read-write lock by the writer.
   pthread_mutex_lock(&rw->mutex);
-  if (rw->writers > 0)
-    rw->writers--;
+  rw->writers--;
+  pthread_cond_broadcast(&rw->cond_r);
+  pthread_cond_broadcast(&rw->cond_w);
   pthread_mutex_unlock(&rw->mutex);
 }

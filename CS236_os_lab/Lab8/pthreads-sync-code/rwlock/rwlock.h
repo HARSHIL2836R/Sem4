@@ -9,6 +9,7 @@ using namespace std;
 struct read_write_lock
 {
     pthread_mutex_t mutex;
+    pthread_cond_t cond_r,cond_w;
     int readers, writers;
 };
 

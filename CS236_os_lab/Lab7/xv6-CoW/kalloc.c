@@ -13,7 +13,14 @@ void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
                    // defined by the kernel linker script in kernel.ld
 
-uint refs[((uint)PHYSTOP)/PGSIZE]={0};
+struct {
+  int num;
+} freepages;
+
+struct {
+  struct spinlock lock;
+  int arr[(uint)PHYSTOP/PGSIZE];
+} refs;
 
 struct run {
   struct run *next;
@@ -36,12 +43,14 @@ kinit1(void *vstart, void *vend)
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
   freerange(vstart, vend);
+  freepages.num = ((uint)vend - (uint)vstart)/PGSIZE;
 }
 
 void
 kinit2(void *vstart, void *vend)
 {
   freerange(vstart, vend);
+  freepages.num += ((uint)vend -(uint)vstart)/PGSIZE;
   kmem.use_lock = 1;
 }
 
@@ -51,7 +60,12 @@ freerange(void *vstart, void *vend)
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
-    kfree(p);
+    {
+      kfree(p);
+      acquire(&refs.lock);
+      refs.arr[V2P((uint)p)/PGSIZE] = 0;
+      release(&refs.lock);
+    }
 }
 //PAGEBREAK: 21
 // Free the page of physical memory pointed at by v,
@@ -74,6 +88,10 @@ kfree(char *v)
   r = (struct run*)v;
   r->next = kmem.freelist;
   kmem.freelist = r;
+  freepages.num++;
+  acquire(&refs.lock);
+  refs.arr[V2P((uint)v)/PGSIZE]--;
+  release(&refs.lock);
   if(kmem.use_lock)
     release(&kmem.lock);
 }
@@ -90,28 +108,19 @@ kalloc(void)
     acquire(&kmem.lock);
   r = kmem.freelist;
   if(r)
-    kmem.freelist = r->next;
+    {
+      kmem.freelist = r->next;
+      freepages.num--;
+      acquire(&refs.lock);
+      refs.arr[V2P((uint)r)/PGSIZE]++;
+      release(&refs.lock);
+    }
   if(kmem.use_lock)
     release(&kmem.lock);
   return (char*)r;
 }
 
-void
-kinc(uint pa)
+int getNumFreePages()
 {
-  if(kmem.use_lock)
-    acquire(&kmem.lock);
-  refs[pa]++;
-  if(kmem.use_lock)
-    release(&kmem.lock);
-}
-
-void
-kdec(uint pa)
-{
-  if(kmem.use_lock)
-    acquire(&kmem.lock);
-  refs[pa]--;
-  if(kmem.use_lock)
-    release(&kmem.lock);
+  return freepages.num;
 }

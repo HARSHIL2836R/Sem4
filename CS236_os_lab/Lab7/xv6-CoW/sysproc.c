@@ -90,23 +90,7 @@ sys_uptime(void)
   return xticks;
 }
 
-int
-sys_numvp(void)
+int sys_getNumFreePages(void)
 {
-  return numvp();
-}
-
-int
-sys_numpp(void)
-{
-  return numpp();
-}
-
-int
-sys_mmap(void)
-{
-  int n;
-  if(argint(0, &n) < 0)
-    return -1;
-  return mmap(n);
+  return getNumFreePages();
 }

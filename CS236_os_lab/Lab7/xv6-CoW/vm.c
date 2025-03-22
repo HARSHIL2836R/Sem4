@@ -79,10 +79,6 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
   return 0;
 }
 
-int
-my_mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm){
-  return mappages(pgdir, va, size, pa, perm);
-}
 // There is one page table per process, plus one that's used when
 // a CPU is not running any process (kpgdir). The kernel uses the
 // current process's page table during system calls and interrupts;
@@ -333,21 +329,18 @@ copyuvm(pde_t *pgdir, uint sz)
       panic("copyuvm: page not present");
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    kinc(pa);
-    // if((mem = kalloc()) == 0)
-    //   goto bad;
-    // memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) {
-      // kfree(mem);
+    if((mem = kalloc()) == 0)
+      goto bad;
+    memmove(mem, (char*)P2V(pa), PGSIZE);
+    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
+      kfree(mem);
       goto bad;
     }
   }
-  
   return d;
 
 bad:
   freevm(d);
-  kdec(pa);
   return 0;
 }
 
@@ -399,43 +392,3 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 //PAGEBREAK!
 // Blank page.
 
-int
-numvp(void)
-{
-  return myproc()->sz/PGSIZE;
-}
-
-int
-numpp(void)
-{
-  pde_t *pde;
-  pte_t *pgtab;
-  struct proc *currproc = myproc();
-  int count =0;
-
-  for (int i=0; i<PDX(KERNBASE); i++){
-  // for (int i=0; i<PDX(currproc->sz); i++){
-    if (currproc->pgdir[i] & PTE_P){
-      pde = currproc->pgdir+i;
-      pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-      for (int j=0;j<NPTENTRIES;j++){
-        if (*(pgtab+j) & PTE_P){
-          // cprintf("Page present. PTE: %p\n",*(pgtab+j));
-          count++;
-        }
-      }
-    }
-  }
-  return count;
-}
-
-int
-mmap(int n)
-{
-  struct proc *currproc = myproc();
-  if (!(n>0 && n%PGSIZE == 0 && currproc->sz + n < KERNBASE))
-    return 0;
-  
-  currproc->sz += n;
-  return currproc->sz - n;
-}
