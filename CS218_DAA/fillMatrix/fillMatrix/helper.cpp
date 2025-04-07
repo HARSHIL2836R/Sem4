@@ -10,7 +10,7 @@ using namespace std;
 	cin >> m;
 	cin >> n;
  
-    	std::vector<std::vector<int> >lower;
+	std::vector<std::vector<int> >lower;
 	std::vector<std::vector<int> >upper;
 
  	std::vector<int>rowL;
