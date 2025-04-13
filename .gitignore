@@ -18,3 +18,4 @@ CS240_AIML_lab/Lab5/Lab 5 solution/mnist_train.csv
 ./CS240_AIML_lab/Project/optillm/.venv/lib/python3.12/site-packages/nvidia/nccl/lib/libnccl.so.2
 ./CS240_AIML_lab/Project/optillm/.venv/lib/python3.12/site-packages/cusparselt/lib/libcusparseLt.so.0
 ./CS240_AIML_lab/Project/optillm/.venv/lib/python3.12/site-packages/triton/_C/libtriton.so
+CS240_AIML_lab/endsem practice/Lab7/mnist_train.csv 
