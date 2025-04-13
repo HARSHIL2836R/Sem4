@@ -39,10 +39,10 @@ int main() {
 			tempVector.push_back(temp);
 		}
 		upper.push_back(tempVector);
- 	}
+	}
 
 
- 	for (int i=0; i< m; i++){
+	for (int i=0; i< m; i++){
 		cin >> temp;
 		rowL.push_back(temp);
 		cin >> temp;
