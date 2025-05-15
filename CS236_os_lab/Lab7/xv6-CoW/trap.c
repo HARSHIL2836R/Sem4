@@ -46,6 +46,13 @@ trap(struct trapframe *tf)
     return;
   }
 
+  if (tf->trapno == T_PGFLT){
+    void *va= rcr2();
+    va = PGROUNDDOWN((uint) va);
+    handlePageFault(va);
+    lapiceoi();
+  }
+
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){

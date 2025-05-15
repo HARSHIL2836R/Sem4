@@ -13,18 +13,13 @@ void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
                    // defined by the kernel linker script in kernel.ld
 
-struct {
-  int num;
-} freepages;
-
-struct {
-  struct spinlock lock;
-  int arr[(uint)PHYSTOP/PGSIZE];
-} refs;
-
 struct run {
   struct run *next;
 };
+
+struct Refcount {
+  int arr[(uint)PHYSTOP/PGSIZE];
+} refs;
 
 struct {
   struct spinlock lock;
@@ -40,17 +35,16 @@ struct {
 void
 kinit1(void *vstart, void *vend)
 {
+  initialiseRefCount();
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
   freerange(vstart, vend);
-  freepages.num = ((uint)vend - (uint)vstart)/PGSIZE;
 }
 
 void
 kinit2(void *vstart, void *vend)
 {
   freerange(vstart, vend);
-  freepages.num += ((uint)vend -(uint)vstart)/PGSIZE;
   kmem.use_lock = 1;
 }
 
@@ -60,12 +54,7 @@ freerange(void *vstart, void *vend)
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
-    {
-      kfree(p);
-      acquire(&refs.lock);
-      refs.arr[V2P((uint)p)/PGSIZE] = 0;
-      release(&refs.lock);
-    }
+    kfree(p);
 }
 //PAGEBREAK: 21
 // Free the page of physical memory pointed at by v,
@@ -88,10 +77,6 @@ kfree(char *v)
   r = (struct run*)v;
   r->next = kmem.freelist;
   kmem.freelist = r;
-  freepages.num++;
-  acquire(&refs.lock);
-  refs.arr[V2P((uint)v)/PGSIZE]--;
-  release(&refs.lock);
   if(kmem.use_lock)
     release(&kmem.lock);
 }
@@ -108,19 +93,59 @@ kalloc(void)
     acquire(&kmem.lock);
   r = kmem.freelist;
   if(r)
-    {
-      kmem.freelist = r->next;
-      freepages.num--;
-      acquire(&refs.lock);
-      refs.arr[V2P((uint)r)/PGSIZE]++;
-      release(&refs.lock);
-    }
+    kmem.freelist = r->next;
   if(kmem.use_lock)
     release(&kmem.lock);
+  
+  increaseRefCount(V2P(r));
   return (char*)r;
 }
 
-int getNumFreePages()
+int
+getFreePages(void)
 {
-  return freepages.num;
+  struct run *r;
+  int num = 0;
+
+  if (kmem.use_lock)
+    acquire(&kmem.lock);
+  
+  r = kmem.freelist;
+
+  while (r)
+  {
+    r = r->next;
+    num++;
+  }
+
+  if (kmem.use_lock)
+    release(&kmem.lock);
+
+  return num;
+}
+
+void
+initialiseRefCount()
+{
+  for (int i=0;i<PHYSTOP/PGSIZE;i++)
+  {
+    refs.arr[i] = 0;
+  }
+}
+
+void
+increaseRefCount(uint pa)
+{
+  refs.arr[pa/PGSIZE]++;
+}
+
+void
+decreaseRefCount(uint pa)
+{
+  refs.arr[pa/PGSIZE]--;
+}
+
+int getRefCount(int pa)
+{
+  return refs.arr[pa/PGSIZE];
 }

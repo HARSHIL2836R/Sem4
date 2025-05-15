@@ -90,7 +90,8 @@ sys_uptime(void)
   return xticks;
 }
 
-int sys_getNumFreePages(void)
+int
+sys_getFreePages(void)
 {
-  return getNumFreePages();
+  return getFreePages();
 }

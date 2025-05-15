@@ -1,0 +1,74 @@
+\documentclass[24pt]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{xcolor} % Load the xcolor package
+\usepackage{amsmath} % Math symbols
+\usepackage{hyperref} % Style hyperreferences
+\usepackage{blindtext}
+\usepackage{fancyhdr}
+\usepackage{subcaption}
+\usepackage [ a4paper , margin=1in ] { geometry }
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+
+\title{Weekly Phone Usage and Music Patterns}
+\author{
+  Harshil Solanki\\
+  \texttt{23B1016}
+}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Data Description}
+\subsection*{What did I collect and why?}
+I collected my phone screen times across a week for two timelines: one week before endsems and during the endsems. Additionally, I collected my music listening time, which would not correspond to screen time as I also listen to music from my laptop. The purpose of this data collection was to analyze how my screen time and music habits change during periods of high academic stress.
+
+\subsection*{How did I gather it?}
+The data was gathered using the following tools:
+\begin{itemize}
+    \item \textbf{Digital Wellbeing App:} Automatically tracks and saves weekly phone screen time statistics.
+    \item \textbf{Spotify:} Provides monthly music listening statistics.
+\end{itemize}
+The data was collected daily by preserving screenshots of the statistics at the end of each day. This ensured accurate and consistent data representation over the two-week period.
+
+\section{Data Structure}
+The data is structured in a CSV file with the following columns:
+\begin{itemize}
+    \item \textbf{Date:} The date of data collection in DD-MM-YYYY format.
+    \item \textbf{Daily Screen Time (min):} Total screen time in minutes for the day.
+    \item \textbf{Late Night, Morning, Afternoon, Evening:} Screen time ranges (in minutes) for different parts of the day.
+    \item \textbf{Overall Music Time:} Total music listening time in minutes for the day.
+\end{itemize}
+For example:
+\begin{verbatim}
+Date,Daily Screen Time (min),Late Night,Morning,Afternoon,Evening,Overall Music Time
+06-04-2025,120,30-45,15-30,0-15,45-60,160
+\end{verbatim}
+
+\section{Reflection}
+\subsection*{Why this topic? Challenges I faced}
+\begin{enumerate}
+    \item My mobile phone is the closest thing to me when it comes to everyday life.
+    \item Observing this easily accessible yet mostly ignored data can give me deeper insights into my routine and practices.
+    \item This data was easy to collect, requiring only screenshots from apps I already use.
+\end{enumerate}
+
+\subsection*{How does the data reveal something about my life?}
+The data reveals how my screen time and music listening habits fluctuate based on my academic workload. For instance, during the week before endsems, my screen time was higher in the evenings, likely due to study breaks and procrastination. During endsems, music listening time increased significantly, possibly as a stress-relief mechanism to help me focus or relax. Additionally, Late Night screen time increased, suggesting that after long hours of studying, I tend to use my phone as a way to unwind. These patterns highlight how external factors like academic stress influence my daily habits and coping mechanisms.
+
+\subsection*{Design Choices and Challenges}
+\begin{itemize}
+    \item \textbf{Design Choices:} I chose to categorize screen time into different parts of the day (Late Night, Morning, Afternoon, Evening) to identify patterns in my usage. This categorization allowed me to observe how my phone usage varied throughout the day and how it was influenced by my daily routine and academic workload. For instance, Late Night usage could indicate stress relief after studying, while Morning usage might reflect my habits of checking notifications or planning the day. Music time, on the other hand, was recorded as a single daily total for simplicity. While it would have been possible to break it down into smaller time intervals, I decided against it to avoid overcomplicating the data collection process. Additionally, I focused on tools that were already part of my daily life, such as the Digital Wellbeing app and Spotify, to ensure that the data collection process was seamless and did not require additional effort or new tools.
+    \item \textbf{Challenges:} The main challenge was ensuring consistency in data collection. Since the data was collected daily, missing even a single day could have resulted in incomplete data, which would have impacted the analysis. To address this, I made it a habit to take screenshots of the statistics at the end of each day. Another challenge was deciding which data to preserve and how it would impact the analysis. For example, while the Digital Wellbeing app provided detailed breakdowns of screen time by app, I chose to focus on broader categories (e.g., Late Night, Morning) to keep the analysis manageable. Similarly, while Spotify provides monthly music statistics, I had to estimate daily music time based on my listening habits and the available data. This introduced a level of approximation, which I had to account for during the analysis.
+\end{itemize}
+
+\subsection*{How the process changed my view of data}
+This process made me realize the importance of small, everyday data in understanding personal habits. Initially, I underestimated how much insight could be gained from something as simple as screen time or music listening habits. However, as I started analyzing the data, I began to notice patterns that I had not been consciously aware of. For example, during periods of high academic stress, my Late Night screen time increased significantly, suggesting that I used my phone as a way to unwind after studying. Similarly, my music listening time also increased during these periods, highlighting its role as a stress-relief mechanism. This process also made me more mindful of my habits and how they are influenced by external factors such as academic workload. It highlighted the potential of data to not only reveal patterns but also to inform decisions and encourage positive changes. For instance, by identifying the times of day when my screen time was highest, I could take steps to reduce unnecessary usage and allocate that time to more productive activities. Overall, this experience has given me a deeper appreciation for the value of data in understanding and improving personal habits. It has also made me more aware of the challenges involved in data collection and analysis, such as ensuring consistency, dealing with incomplete or approximate data, and making design choices that balance simplicity and detail.
+
+\end{document}

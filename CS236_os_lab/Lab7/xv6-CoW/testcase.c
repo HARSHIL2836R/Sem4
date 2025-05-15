@@ -5,13 +5,21 @@
 
 int main(void)
 {
-  int nums = getNumFreePages();
-  printf(1, "Hello, world! Nums = %d\n", nums);
-  
+  int a = 25;
   int ret = fork();
-  
-  nums = getNumFreePages();
-  printf(1, "Hello, world! Nums = %d %d\n", nums,ret);
-
+  if (ret == 0)
+  {
+    printf(1,"Inside child\n");
+    printf(1,"%d\n",getFreePages());
+    a =30;
+    printf(1,"Changed a\n");
+  }
+  else
+  {
+    sleep(50);
+    printf(1,"Parent woke after sleep\n");
+    printf(1,"%d\n",getFreePages());
+    wait();
+  }
   exit();
 }

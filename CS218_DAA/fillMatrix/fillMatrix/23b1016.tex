@@ -1,0 +1,29 @@
+\documentclass{article}
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue, filecolor=blue]{hyperref} %For Coloring Links
+\usepackage{geometry} % Customizing margins
+\geometry{ %Ideal Page Size
+a4paper,
+total={170mm,257mm},
+left=20mm,
+top=20mm,
+}
+\title{CS218 DAA Programming Assignment 2}
+\author{23B1016: Harshil Solanki}
+
+\begin{document} 
+\maketitle
+\section*{Algorithm:}
+
+\begin{enumerate}
+    \item Make a graph corresponding to the network, with m + n + 2 nodes, extra nodes for source and sink. For each edge make lower and uppper bounds corresponding to the given contraints.
+    \item Add an extra edge from sink to source to enable circulation. With lower and upper bound as max(out(low,source), in(low,sink)) and min(out(high,source), in(high,sink)) respectively.
+    \item Make another (super) network with two extra nodes, super source and sink. For each node in original network compute it's demand as by summing up flow in original network(all lower bounds as initial flow). For each edge in original network, create a new edge in this network with lower bound as 0 and upper bound as the difference of upper bound and lower bound of original network. For each node, if demand is negative then add an edge from super source to that node with lower bound as 0 and upper bound as the absolute value of demand. If demand is positive, add an edge from that node to super sink with lower bound as 0 and upper bound as the demand.
+    \item Run Edmond Karp in the super network, which is a BFS based implementation of Ford Fulkerson algorithm. If the flow in the super network is equal to the sum of all positive demands, then the flow in original network is feasible. Otherwise, it is not feasible.
+    \item If the flow in the super network is feasible, then lower bounds of original network are added to the flow in super network to get the minimum flow in original network.
+    \item To find the maximum flow, create a new network with flow as super position of lower bounds and feasible flow, then run Edmond Karp in this network with capacities as the difference of upper bound and flow in each edge. The new flow in this network is the maximum flow in original network.
+\end{enumerate}
+
+\section*{Compilation instructions (for Linux)}
+\texttt{g++ 23b1016.cpp -o 23b1016.out}\\
+Run \texttt{23b1016.out}
+\end{document}  

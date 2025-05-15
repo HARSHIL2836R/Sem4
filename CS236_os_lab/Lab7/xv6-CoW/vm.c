@@ -327,15 +327,17 @@ copyuvm(pde_t *pgdir, uint sz)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
       panic("copyuvm: page not present");
+
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto bad;
-    memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
+    flags = flags * ~PTE_P;
+    flags = flags | PTE_COW;
+    increaseRefCount(pa);
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) {
       kfree(mem);
       goto bad;
     }
+    lcr3(V2P(pgdir));
   }
   return d;
 
@@ -392,3 +394,56 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 //PAGEBREAK!
 // Blank page.
 
+void
+handlePageFault(void* va)
+{
+  pte_t *pgdir = myproc()->pgdir;
+  uint flags;
+  pte_t *pte = walkpgdir(pgdir,va,0);
+  if (pte == 0)
+    panic("segfault");
+  flags = PTE_FLAGS(*pte);
+  uint pa = PTE_ADDR(*pte);
+  if (getRefCount(pa) < 1) {
+    // not theoretically possible! At least one process should be using this!
+    cprintf("[DEBUG] vm.c, 400 : refcount = %d pid = %d va = %d, pa/pgsize = %d, process size = %d\n",getRefCount(pa),myproc()->pid,(int)va,pa/PGSIZE,myproc()->sz);
+    exit();
+    return;
+  }
+  if (getRefCount(pa) == 1) {
+    // case 1 : You're the last (and only) guy using this page
+    //chalo nice and easy. All we have to do is update our permissions... 
+    if (flags & PTE_COW) {
+      //bing bang boom just update
+      *pte = *pte&~PTE_COW; // take away Cow indicator
+      *pte = *pte|PTE_W; //give write perms
+
+      switchuvm(myproc()); // this internally calls lcr3
+      return;
+    }
+    else {
+      cprintf("Page fault on address not Cow forked!\n");
+      myproc()->killed = 1;
+    }
+  }
+  if (flags & PTE_COW) {
+    // us reaching here indicates that there are multiple processes using this pa, we must allocate a seperate pa for ourselves.
+    char *mem = kalloc();
+    memmove(mem,(void*)P2V(pa),PGSIZE);
+
+    flags = flags&~PTE_COW; // take away Cow indicator
+    flags = flags|PTE_W; // give write permissions
+
+    *pte = (V2P(mem) | flags); // change your PTE to point to mem instead of pa
+
+    decreaseRefCount(pa); // decrease the count of processes using pa
+    switchuvm(myproc()); // call lcr3
+    return;
+  }
+  else {
+    cprintf("[DEBUG] vm.c, 441 : flags = %d and refs = %d\n",flags,getRefCount(pa));
+    exit();
+    return;
+  }
+
+}

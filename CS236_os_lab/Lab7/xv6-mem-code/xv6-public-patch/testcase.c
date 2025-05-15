@@ -5,7 +5,6 @@
 
 int main(void)
 {
-  int nums = numvp();
-  printf(1, "Hello, world! Nums = %d\n", nums);
+  printf(1, "Hello, world!\n");
   exit();
 }

@@ -48,18 +48,26 @@ int main() {
 
     // Source to product nodes (row constraints)
     for (int i = 0; i < m; ++i) {
-        dotFile << "    S -> P" << i << " [label=\"(" << row_l[i] << "," << row_u[i] << ")\"];\n";
+        if (row_l[i] != 0 || row_u[i] != 0) {
+            dotFile << "    S -> P" << i << " [label=\"(" << row_l[i] << "," << row_u[i] << ")\"];\n";
+        }
     }
 
     // City nodes to sink (column constraints)
     for (int j = 0; j < n; ++j) {
-        dotFile << "    C" << j << " -> T [label=\"(" << col_l[j] << "," << col_u[j] << ")\"];\n";
+        if (col_l[j] != 0 || col_u[j] != 0) {
+            dotFile << "    C" << j << " -> T [label=\"(" << col_l[j] << "," << col_u[j] << ")\"];\n";
+        }
     }
 
     // Product to city (cell constraints)
-    for (int i = 0; i < m; ++i)
-        for (int j = 0; j < n; ++j)
-            dotFile << "    P" << i << " -> C" << j << " [label=\"(" << L[i][j] << "," << U[i][j] << ")\"];\n";
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            if (L[i][j] != 0 || U[i][j] != 0) {
+                dotFile << "    P" << i << " -> C" << j << " [label=\"(" << L[i][j] << "," << U[i][j] << ")\"];\n";
+            }
+        }
+    }
 
     // Define nodes
     dotFile << "    S [label=\"Source\"];\n";
